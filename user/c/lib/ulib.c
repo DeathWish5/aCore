@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "syscall.h"
+#include "liburing.h"
 
 ssize_t write(int fd, const void* buf, size_t count)
 {
