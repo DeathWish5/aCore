@@ -26,7 +26,6 @@ struct io_uring_cqe {
 };
 
 struct io_uring_sq {
-    uint32_t *kring_mask;
     uint32_t *kring_entries;
     uint32_t *khead;    /* index of queue head */
     uint32_t *ktail;    /* index of queue tail */
@@ -35,7 +34,6 @@ struct io_uring_sq {
 };
 
 struct io_uring_cq {
-    uint32_t *kring_mask;
     uint32_t *kring_entries;
     uint32_t *khead;    /* index of queue head */
     uint32_t *ktail;    /* index of queue tail */
@@ -52,27 +50,23 @@ struct io_uring {
 struct io_sqring_offsets {
     uint32_t head;
     uint32_t tail;
-    uint32_t ring_mask;
     uint32_t ring_entries;
-    uint32_t flags;
     uint32_t sqes;
+    uint32_t flags;
 };
 
 struct io_cqring_offsets {
     uint32_t head;
     uint32_t tail;
-    uint32_t ring_mask;
     uint32_t ring_entries;
     uint32_t cqes;
 };
 
 struct io_uring_info {
     void* shared_memory_start;
-    void* shared_memory_end;
-    void* sq_ptr;
-    void* cq_ptr;
-    ssize_t sq_size;
-    ssize_t cq_size;
+    ssize_t shared_memory_length
+    ssize_t sq_ptr;
+    ssize_t cq_ptr;
     struct io_sqring_offsets sq_off;
     struct io_cqring_offsets cq_off;
 };
@@ -85,7 +79,7 @@ struct io_uring_params {
 
 ssize_t io_uring_setup(struct io_uring_params* para, struct io_uring_info* info)
 {
-    return syscall(SYS_io_uring_setup, para, info);
+    return syscall(SYS_io_uring_setup, para->sqe_entries, para->cqe_entries, para->flags, info);
 }
 
 ssize_t io_uring_enter(uint64_t fd, unsigned int to_submit, unsigned int min_complete,
