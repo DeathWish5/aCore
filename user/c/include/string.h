@@ -1,8 +1,10 @@
-#ifndef __ACORE_USER_STRING_H__
-#define __ACORE_USER_STRING_H__
+#ifndef __STRING_H__
+#define __STRING_H__
 
+#include <stddef.h>
+
+size_t strlen(const char*);
 int atoi(const char *s);
 
+#endif // __STRING_H__
 
-
-#endif // __ACORE_USER_STRING_H__
