@@ -297,3 +297,5 @@
 
 #define __NR_sysriscv __NR_arch_specific_syscall
 #define __NR_riscv_flush_icache (__NR_sysriscv + 15)
+
+#define __NR_
