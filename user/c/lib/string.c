@@ -1,39 +1,36 @@
 #include <stddef.h>
 #include <string.h>
 
-size_t strlen(const char *s)
-{
-	const char *a = s;
-	for (; *s; s++);
-	return s-a;
+size_t strlen(const char *s) {
+    const char *a = s;
+    for (; *s; s++);
+    return s - a;
 }
 
-int isspace(int c)
-{
-    return c == ' ' || (unsigned)c-'\t' < 5;
+int isspace(int c) {
+    return c == ' ' || (unsigned) c - '\t' < 5;
 }
 
-int isdigit(int c)
-{
-    return (unsigned)c-'0' < 10;
+int isdigit(int c) {
+    return (unsigned) c - '0' < 10;
 }
 
-int atoi(const char *s)
-{
-    int n=0, neg=0;
+int atoi(const char *s) {
+    int n = 0, neg = 0;
     while (isspace(*s)) s++;
     switch (*s) {
-        case '-': neg=1;
-        case '+': s++;
+        case '-':
+            neg = 1;
+        case '+':
+            s++;
     }
     /* Compute n as a negative number to avoid overflow on INT_MIN */
     while (isdigit(*s))
-        n = 10*n - (*s++ - '0');
+        n = 10 * n - (*s++ - '0');
     return neg ? n : -n;
 }
 
-void *memset(void *dest, int c, size_t n)
-{
+void *memset(void *dest, int c, size_t n) {
     unsigned char *s = dest;
     size_t k;
 
@@ -43,15 +40,15 @@ void *memset(void *dest, int c, size_t n)
 
     if (!n) return dest;
     s[0] = c;
-    s[n-1] = c;
+    s[n - 1] = c;
     if (n <= 2) return dest;
     s[1] = c;
     s[2] = c;
-    s[n-2] = c;
-    s[n-3] = c;
+    s[n - 2] = c;
+    s[n - 3] = c;
     if (n <= 6) return dest;
     s[3] = c;
-    s[n-4] = c;
+    s[n - 4] = c;
     if (n <= 8) return dest;
 
     /* Advance pointer to align it at a 4-byte boundary,
@@ -59,7 +56,7 @@ void *memset(void *dest, int c, size_t n)
      * already took care of any head/tail that get cut off
      * by the alignment. */
 
-    k = -(uintptr_t)s & 3;
+    k = -(uintptr_t) s & 3;
     s += k;
     n -= k;
     n &= -4;
@@ -70,8 +67,7 @@ void *memset(void *dest, int c, size_t n)
     return dest;
 }
 
-int strcmp(const char *l, const char *r)
-{
-    for (; *l==*r && *l; l++, r++);
-    return *(unsigned char *)l - *(unsigned char *)r;
+int strcmp(const char *l, const char *r) {
+    for (; *l == *r && *l; l++, r++);
+    return *(unsigned char *) l - *(unsigned char *) r;
 }

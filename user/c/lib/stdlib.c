@@ -4,7 +4,7 @@
 static uint64_t seed;
 
 void srand(unsigned s) {
-    seed = s-1;
+    seed = s - 1;
 }
 
 int rand(void) {
