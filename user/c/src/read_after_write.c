@@ -84,26 +84,6 @@ int queue_write(struct async_call_buffer* buffer, int id)
     return 0;
 }
 
-int reserve_rr(struct async_call_buffer* buffer, int reserve)
-{
-    // return async_call_buffer_enter(buffer->buffer_fd, submit, 0, 0);
-    int rr_size;
-    do {
-        rr_size = get_size(buffer->rr);
-    } while (rr_size > BUFFER_ENTRIES - reserve);
-    return rr_size;
-}
-
-int wait_cr(struct async_call_buffer* buffer, int wait)
-{
-    // return async_call_buffer_enter(buffer->buffer_fd, 0, wait, 0);
-    int cr_size;
-    do {
-        cr_size = get_size(buffer->cr);
-    } while (cr_size < wait);
-    return cr_size;
-}
-
 int handle_read_rst(struct async_call_buffer* buffer, int cid)
 {
     struct complete_ring_entry* cre;

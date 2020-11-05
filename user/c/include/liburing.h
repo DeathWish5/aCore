@@ -111,4 +111,8 @@ struct complete_ring_entry* complete_ring_get_entry(struct complete_ring* cr);
 
 int async_call_buffer_init(struct async_call_buffer* buffer, struct async_call_buffer_info* info);
 
+int reserve_rr(struct async_call_buffer* buffer, int reserve);
+
+int wait_cr(struct async_call_buffer* buffer, int wait);
+
 #endif // __LIBURING_H__
