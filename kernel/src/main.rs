@@ -4,6 +4,7 @@
 #![feature(llvm_asm)]
 #![feature(global_asm)]
 #![feature(lang_items)]
+#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate log;
@@ -11,12 +12,17 @@ extern crate log;
 extern crate alloc;
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate memoffset;
+#[macro_use]
+extern crate lazy_static;
 
-mod consts;
+mod config;
 mod error;
 mod lang;
 #[macro_use]
 mod logging;
+mod asynccall;
 mod fs;
 mod memory;
 mod sched;
@@ -33,17 +39,17 @@ use core::sync::atomic::{spin_loop_hint, AtomicBool, Ordering};
 #[no_mangle]
 pub extern "C" fn start_kernel(arg0: usize, arg1: usize) -> ! {
     static AP_CAN_INIT: AtomicBool = AtomicBool::new(false);
-    let cpu_id = arch::boot_cpu_id();
-    if cpu_id == consts::BOOTSTRAP_CPU_ID {
+    let cpu_id = arch::cpu::boot_cpu_id();
+    if cpu_id == config::BOOTSTRAP_CPU_ID {
         memory::clear_bss();
         arch::primary_init_early(arg0, arg1);
         logging::init();
         memory::init();
         unsafe { trapframe::init() };
         arch::primary_init(arg0, arg1);
-        AP_CAN_INIT.store(true, Ordering::Relaxed);
+        AP_CAN_INIT.store(true, Ordering::Release);
     } else {
-        while !AP_CAN_INIT.load(Ordering::Relaxed) {
+        while !AP_CAN_INIT.load(Ordering::Acquire) {
             spin_loop_hint();
         }
         memory::secondary_init();
@@ -52,8 +58,8 @@ pub extern "C" fn start_kernel(arg0: usize, arg1: usize) -> ! {
     }
     println!("Hello, CPU {}!", cpu_id);
     match cpu_id {
-        consts::NORMAL_CPU_ID => normal_main(),
-        consts::IO_CPU_ID => io_main(),
+        config::NORMAL_CPU_ID => normal_main(),
+        config::IO_CPU_ID => io_main(),
         _ => loop {
             arch::cpu::wait_for_interrupt();
         },
@@ -68,8 +74,6 @@ pub fn normal_main() -> ! {
 
 pub fn io_main() -> ! {
     info!("Hello, I/O CPU!");
-    unsafe { trapframe::init() };
-    loop {
-        arch::cpu::wait_for_interrupt();
-    }
+    asynccall::init();
+    asynccall::run_forever();
 }

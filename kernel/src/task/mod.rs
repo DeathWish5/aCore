@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 mod context;
+mod resource;
 mod thread;
 
 use alloc::sync::Arc;
@@ -34,7 +33,7 @@ pub fn init() {
         Thread::new_kernel(async move {
             for i in 0..20 {
                 println!("TEST kernel thread {}", i);
-                super::sched::yield_now().await?;
+                super::sched::yield_now().await;
             }
             Ok(())
         })

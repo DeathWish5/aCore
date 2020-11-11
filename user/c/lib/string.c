@@ -70,4 +70,5 @@ void *memset(void *dest, int c, size_t n) {
 int strcmp(const char *l, const char *r) {
     for (; *l == *r && *l; l++, r++);
     return *(unsigned char *) l - *(unsigned char *) r;
+
 }

@@ -24,14 +24,13 @@ void exit(int code)
     syscall(SYS_exit, code);
 }
 
-ssize_t setup_async_call(unsigned int rre_entries, unsigned int cre_entries, uint64_t flags,
-                                void* info)
-{
-    return syscall(SYS_setup_async_call, rre_entries, cre_entries, flags, info);
-}
-
 // ssize_t async_call_enter(uint64_t fd, unsigned int to_submit, unsigned int min_complete,
 //                                uint64_t flags)
 //{
 //    return syscall(SYS_async_call_enter, fd, to_submit, min_complete, flags);
 //}
+
+int setup_async_call(int req_capacity, int comp_capacity, void* info, size_t info_size)
+{
+    return syscall(SYS_setup_async_call, req_capacity, comp_capacity, info, info_size);
+}

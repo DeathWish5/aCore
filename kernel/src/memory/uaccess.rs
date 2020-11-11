@@ -47,6 +47,9 @@ pub type UserInPtr<T> = UserPtr<T, In>;
 pub type UserOutPtr<T> = UserPtr<T, Out>;
 pub type UserInOutPtr<T> = UserPtr<T, InOut>;
 
+unsafe impl<T, P: Policy> Send for UserPtr<T, P> {}
+unsafe impl<T, P: Policy> Sync for UserPtr<T, P> {}
+
 impl<T, P: Policy> Debug for UserPtr<T, P> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{:?}", self.ptr)
@@ -80,13 +83,13 @@ impl<T, P: Policy> UserPtr<T, P> {
 
     pub fn check(&self, count: usize) -> AcoreResult {
         if self.ptr.is_null() {
-            return Err(AcoreError::InvalidArgs);
+            return Err(AcoreError::Fault);
         }
         if (self.ptr as usize) % core::mem::align_of::<T>() != 0 {
             return Err(AcoreError::InvalidArgs);
         }
         if !user_access_ok(self.ptr as usize, core::mem::size_of::<T>() * count) {
-            return Err(AcoreError::InvalidArgs);
+            return Err(AcoreError::Fault);
         }
         Ok(())
     }

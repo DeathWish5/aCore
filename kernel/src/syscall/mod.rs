@@ -1,52 +1,57 @@
-mod consts;
-
+use alloc::sync::Arc;
 use core::convert::TryFrom;
 
+use crate::arch::syscall_ids::SyscallType as Sys;
+use crate::asynccall::{AsyncCall, AsyncCallInfoUser};
 use crate::error::{AcoreError, AcoreResult};
 use crate::fs::get_file_by_fd;
 use crate::memory::uaccess::{UserInPtr, UserOutPtr};
 use crate::task::Thread;
-use consts::SyscallType as Sys;
 
 pub struct Syscall<'a> {
-    thread: &'a Thread,
+    thread: &'a Arc<Thread>,
 }
 
 type SysResult = AcoreResult<usize>;
 
 impl<'a> Syscall<'a> {
-    pub fn new(thread: &'a Thread) -> Self {
+    pub fn new(thread: &'a Arc<Thread>) -> Self {
         Self { thread }
     }
 
-    pub fn syscall(&mut self, num: u32, args: [usize; 6]) -> isize {
+    pub fn syscall(&self, num: u32, args: [usize; 6]) -> SysResult {
+        if self.thread.is_exited() {
+            return Err(AcoreError::BadState);
+        }
         let sys_type = match Sys::try_from(num) {
             Ok(t) => t,
             Err(_) => {
                 error!("invalid syscall number: {}", num);
-                return -(AcoreError::InvalidArgs as isize);
+                return Err(AcoreError::InvalidArgs);
             }
         };
-        debug!("{:?} => args={:x?}", sys_type, args);
+        debug!("Syscall: {:?} => args={:x?}", sys_type, args);
 
-        let [a0, a1, a2, _a3, _a4, _a5] = args;
+        let [a0, a1, a2, a3, _a4, _a5] = args;
         let ret = match sys_type {
             Sys::READ => self.sys_read(a0, a1.into(), a2),
             Sys::WRITE => self.sys_write(a0, a1.into(), a2),
             Sys::SCHED_YIELD => self.sys_yield(),
             Sys::GETPID => self.sys_getpid(),
             Sys::EXIT => self.sys_exit(a0),
+            Sys::SETUP_ASYNC_CALL => self.sys_setup_async_call(a0, a1, a2.into(), a3),
             _ => {
                 warn!("syscall unimplemented: {:?}", sys_type);
                 Err(AcoreError::NotSupported)
             }
         };
 
-        info!("{:?} <= {:?}", sys_type, ret);
-        match ret {
-            Ok(code) => code as isize,
-            Err(err) => -(err as isize),
+        if ret.is_err() {
+            warn!("Syscall: {:?} <= {:?}", sys_type, ret);
+        } else {
+            info!("Syscall: {:?} <= {:?}", sys_type, ret);
         }
+        ret
     }
 }
 
@@ -76,6 +81,25 @@ impl Syscall<'_> {
 
     fn sys_exit(&self, code: usize) -> SysResult {
         self.thread.exit(code);
+        Ok(0)
+    }
+
+    fn sys_setup_async_call(
+        &self,
+        req_capacity: usize,
+        comp_capacity: usize,
+        mut out_info: UserOutPtr<AsyncCallInfoUser>,
+        info_size: usize,
+    ) -> SysResult {
+        if info_size != core::mem::size_of::<AsyncCallInfoUser>() {
+            return Err(AcoreError::InvalidArgs);
+        }
+        let res = AsyncCall::setup(&self.thread, req_capacity, comp_capacity)?;
+        info!(
+            "setup_async_call: req_capacity={}, comp_capacity={}, out_info={:#x?}",
+            req_capacity, comp_capacity, res
+        );
+        out_info.write(res)?;
         Ok(0)
     }
 }

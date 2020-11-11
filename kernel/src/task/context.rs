@@ -1,4 +1,4 @@
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 
 use super::Thread;
 use crate::error::{AcoreError, AcoreResult};
@@ -35,6 +35,7 @@ pub trait ThreadContext: core::fmt::Debug + Send + Sync {
     fn end_trap(&mut self, trap: TrapReason);
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum TrapReason {
     Syscall,
@@ -46,7 +47,7 @@ pub enum TrapReason {
 
 impl Thread {
     pub fn handle_user_trap(
-        &self,
+        self: &Arc<Self>,
         trap: TrapReason,
         ctx: &mut Box<impl ThreadContext>,
     ) -> AcoreResult {
@@ -63,15 +64,18 @@ impl Thread {
         res
     }
 
-    fn handle_page_fault(&self, vaddr: VirtAddr, access_flags: MMUFlags) -> AcoreResult {
+    fn handle_page_fault(self: &Arc<Self>, vaddr: VirtAddr, access_flags: MMUFlags) -> AcoreResult {
         debug!("page fault @ {:#x} with access {:?}", vaddr, access_flags);
         self.vm.lock().handle_page_fault(vaddr, access_flags)
     }
 
-    fn handle_syscall(&self, ctx: &mut Box<impl ThreadContext>) -> AcoreResult {
+    fn handle_syscall(self: &Arc<Self>, ctx: &mut Box<impl ThreadContext>) -> AcoreResult {
         let num = ctx.get_syscall_num() as u32;
         let args = ctx.get_syscall_args();
-        let ret = Syscall::new(&self).syscall(num, args) as usize;
+        let ret = match Syscall::new(&self).syscall(num, args) {
+            Ok(code) => code,
+            Err(err) => err as usize,
+        };
         ctx.set_syscall_ret(ret);
         Ok(())
     }
