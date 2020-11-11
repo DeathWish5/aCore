@@ -1,4 +1,3 @@
-#include <liburing.h>
 #include <stddef.h>
 #include <unistd.h>
 
@@ -23,12 +22,6 @@ void exit(int code)
 {
     syscall(SYS_exit, code);
 }
-
-// ssize_t async_call_enter(uint64_t fd, unsigned int to_submit, unsigned int min_complete,
-//                                uint64_t flags)
-//{
-//    return syscall(SYS_async_call_enter, fd, to_submit, min_complete, flags);
-//}
 
 int setup_async_call(int req_capacity, int comp_capacity, void* info, size_t info_size)
 {

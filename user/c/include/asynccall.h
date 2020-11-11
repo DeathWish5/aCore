@@ -84,6 +84,12 @@ static inline void async_call_write(struct req_ring_entry* req, int fd, const vo
     async_call_rw(ASYNC_CALL_WRITE, req, fd, addr, len, offset);
 }
 
+static inline void async_call_read(struct req_ring_entry* req, int fd, const void* addr,
+                                   unsigned len, uint64_t offset)
+{
+    async_call_rw(ASYNC_CALL_READ, req, fd, addr, len, offset);
+}
+
 struct req_ring_entry* req_ring_get_entry(struct async_call_buffer* buffer, uint32_t idx);
 
 struct comp_ring_entry* comp_ring_get_entry(struct async_call_buffer* buffer, uint32_t idx);
