@@ -55,15 +55,28 @@ impl Log for SimpleLogger {
             return;
         }
 
-        print_in_color(
-            format_args!(
-                "[{:>5}][{}] {}\n",
-                record.level(),
-                crate::arch::cpu::id(),
-                record.args()
-            ),
-            level_to_color_code(record.level()),
-        );
+        if let Some(thread) = crate::task::PerCpu::from_current_cpu_id().thread() {
+            print_in_color(
+                format_args!(
+                    "[{:>5}][{},{}] {}\n",
+                    record.level(),
+                    crate::arch::cpu::id(),
+                    thread.id,
+                    record.args()
+                ),
+                level_to_color_code(record.level()),
+            );
+        } else {
+            print_in_color(
+                format_args!(
+                    "[{:>5}][{},-] {}\n",
+                    record.level(),
+                    crate::arch::cpu::id(),
+                    record.args()
+                ),
+                level_to_color_code(record.level()),
+            );
+        }
     }
     fn flush(&self) {}
 }

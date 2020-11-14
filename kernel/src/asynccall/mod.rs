@@ -3,25 +3,27 @@ mod structs;
 
 use alloc::{boxed::Box, sync::Arc};
 use core::convert::TryFrom;
+use core::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use spin::Mutex;
 
 use crate::arch::cpu;
+use crate::config::IO_CPU_ID;
 use crate::error::{AcoreError, AcoreResult};
 use crate::memory::{
     addr::{is_aligned, virt_to_phys},
     areas::{PmAreaFixed, VmArea},
     MMUFlags, PAGE_SIZE,
 };
-use crate::sched::{yield_now, Executor};
-use crate::task::Thread;
+use crate::sched::yield_now;
+use crate::task::{PerCpu, Thread};
 use structs::{AsyncCallType, CompletionRingEntry, RequestRingEntry};
 
 pub use structs::{AsyncCallBuffer, AsyncCallInfoUser};
-
-lazy_static! {
-    static ref ASYNC_CALL_EXECUTOR: Executor = Executor::default();
-}
 
 pub struct AsyncCall {
     thread: Arc<Thread>,
@@ -65,9 +67,7 @@ impl AsyncCall {
         *thread.owned_res.async_buf.lock() = Some(buf);
 
         // spawn async call polling coroutine and notify the I/O CPU
-        let ac = Self::new(thread.clone());
-        ASYNC_CALL_EXECUTOR.spawn(Box::pin(async move { ac.polling().await }));
-        cpu::send_ipi(crate::config::IO_CPU_ID);
+        spawn_polling(thread);
 
         Ok(info)
     }
@@ -85,6 +85,7 @@ impl AsyncCall {
         };
         debug!("AsyncCall: {:?} => {:x?}", ac_type, req);
         let fd = req.fd as usize;
+        let flags = req.flags as usize;
         let offset = req.offset as usize;
         let user_buf_addr = req.user_buf_addr as usize;
         let buf_size = req.buf_size as usize;
@@ -98,6 +99,8 @@ impl AsyncCall {
                 self.async_write(fd, user_buf_addr.into(), buf_size, offset)
                     .await
             }
+            AsyncCallType::Open => self.async_open(user_buf_addr.into(), flags).await,
+            AsyncCallType::Close => self.async_close(fd).await,
             _ => {
                 warn!("asynca call unimplemented: {:?}", ac_type);
                 Err(AcoreError::NotSupported)
@@ -122,6 +125,7 @@ impl AsyncCall {
         let mut cached_req_head = buf.read_req_ring_head();
         let mut cached_comp_tail = buf.read_comp_ring_tail();
         let req_count = buf.request_count(cached_req_head)?;
+        // TODO: limit requests count or time for one thread
         for _ in 0..req_count {
             if self.thread.is_exited() {
                 break;
@@ -149,9 +153,41 @@ impl AsyncCall {
                 self.thread.exit(e as usize);
                 break;
             }
+            yield_now().await;
         }
         info!("async call polling for thread {} is done.", self.thread.id);
     }
+}
+
+type AsyncCallFuture = dyn Future<Output = ()> + Send;
+type AsyncCallFuturePinned = Pin<Box<AsyncCallFuture>>;
+
+struct AsyncCallSwitchFuture {
+    thread: Arc<Thread>,
+    future: AsyncCallFuturePinned,
+}
+
+impl AsyncCallSwitchFuture {
+    fn new(thread: Arc<Thread>, future: AsyncCallFuturePinned) -> Self {
+        Self { thread, future }
+    }
+}
+
+impl Future for AsyncCallSwitchFuture {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        PerCpu::set_current_thread(&self.thread);
+        self.get_mut().future.as_mut().poll(cx)
+    }
+}
+
+fn spawn_polling(thread: &Arc<Thread>) {
+    let ac = AsyncCall::new(thread.clone());
+    PerCpu::from_cpu_id(IO_CPU_ID).spawn(AsyncCallSwitchFuture::new(
+        thread.clone(),
+        Box::pin(async move { ac.polling().await }),
+    ));
+    cpu::send_ipi(IO_CPU_ID);
 }
 
 pub fn init() {
@@ -160,7 +196,7 @@ pub fn init() {
 
 pub fn run_forever() -> ! {
     loop {
-        ASYNC_CALL_EXECUTOR.run_until_idle();
+        PerCpu::from_cpu_id(IO_CPU_ID).run_until_idle();
         info!("no async coroutines to run, waiting for interrupt...");
         cpu::wait_for_interrupt();
     }
