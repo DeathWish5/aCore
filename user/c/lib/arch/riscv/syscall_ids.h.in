@@ -295,9 +295,8 @@
 #define __NR_pidfd_getfd            438
 #define __NR_faccessat2             439
 
-#define __NR_sysriscv           __NR_arch_specific_syscall
-#define __NR_riscv_flush_icache (__NR_sysriscv + 15)
+#define __NR_sysriscv               __NR_arch_specific_syscall
+#define __NR_riscv_flush_icache     (__NR_sysriscv + 15)
 
 // async call buffer syscall ids
-#define __NR_setup_async_call 525
-#define __NR_async_call_enter 526
+#define __NR_setup_async_call       500
