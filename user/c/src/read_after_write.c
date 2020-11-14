@@ -18,7 +18,7 @@ char check[ID_MAX][BS];
 int hash_content(char* content)
 {
     int i;
-    for(i = 0; i < BS / 32; ++i)
+    for(i = 0; i < BS / 32; ++i) {
         *(int*)(content + 4*i) = rand();
     }
     return 0;
