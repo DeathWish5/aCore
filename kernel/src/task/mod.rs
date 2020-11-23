@@ -103,16 +103,16 @@ pub fn init() {
     spawn(Thread::new_kernel(thread::idle()).unwrap());
     spawn(Thread::new_user(&init_elf, vec!["arg0".into(), "arg1".into()]).unwrap());
     spawn(Thread::new_user(&init_elf, vec!["arg2".into(), "arg3".into()]).unwrap());
-    spawn(
-        Thread::new_kernel(async move {
-            for i in 0..20 {
-                println!("TEST kernel thread {}", i);
-                super::sched::yield_now().await;
-            }
-            Ok(())
-        })
-        .unwrap(),
-    );
+    // spawn(
+    //     Thread::new_kernel(async move {
+    //         for i in 0..20 {
+    //             println!("TEST kernel thread {}", i);
+    //             super::sched::yield_now().await;
+    //         }
+    //         Ok(())
+    //     })
+    //     .unwrap(),
+    // );
 }
 
 pub fn run_forever() -> ! {

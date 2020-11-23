@@ -6,14 +6,14 @@
 #include <unistd.h>
 
 #define BUFFER_ENTRIES (64)
-//#define BS             (16 << 10)
-//#define INSIZE         (16 << 20)
-#define BS             (32)
-#define INSIZE         (8 * 32)
+#define BS             (0x100)
+#define INSIZE         (0x10000)
+//#define BS             (32)
+//#define INSIZE         (8 * 32)
 #define ID_MAX         (INSIZE / BS)
 #define min(a, b)      (a > b ? b : a)
 
-#define FD (stdout)
+int FD;
 
 int hash(char* buf) {
     int i, checksum = 0;
@@ -40,19 +40,6 @@ int init_buffer(char* buf, int* check)
         check[i] = hash(&buf[BS*i]);
     }
     return 0;
-}
-
-int run_test(struct async_call_buffer* buffer) {
-    char buf[INSIZE];
-    int check[ID_MAX], ret;
-    memset(buf, 0, INSIZE);
-    srand(233);
-    init_buffer(buf, check);
-    ret = write_file(buffer, buf);
-    if(ret < 0)
-        return ret;
-    memset(buf, 0, INSIZE);
-    return check_file(buffer, buf, check);
 }
 
 int write_file(struct async_call_buffer* buffer, char* buf)
@@ -85,14 +72,13 @@ int check_file(struct async_call_buffer* buffer, char* buf, int* check)
     int rid = 0, cid = 0;
     while (cid < ID_MAX) {
         while (*buffer->comp_ring.khead < smp_load_acquire(buffer->comp_ring.ktail)) {
-            int cached_head = *buffer->comp_ring.khead, id;
+            int cached_head = *buffer->comp_ring.khead;
             struct comp_ring_entry* comp = comp_ring_get_entry(buffer, cached_head);
-            id = comp->user_data;
-            if (comp->result != BS || hash(buf[BS*id]) != check[id]) {
+            if (comp->result != BS || hash(&buf[BS*cid]) != check[cid]) {
                 return 1;
             }
-            smp_store_release(buffer->comp_ring.khead, cached_head + 1);
             cid++;
+            smp_store_release(buffer->comp_ring.khead, cached_head + 1);
         }
         while (rid < ID_MAX && *buffer->req_ring.ktail <
                                    smp_load_acquire(buffer->req_ring.khead) + BUFFER_ENTRIES) {
@@ -106,14 +92,34 @@ int check_file(struct async_call_buffer* buffer, char* buf, int* check)
     return 0;
 }
 
+int run_test(struct async_call_buffer* buffer) {
+    char buf[INSIZE];
+    int check[ID_MAX], ret;
+    memset(buf, 0, INSIZE);
+    srand(233);
+    init_buffer(buf, check);
+    ret = write_file(buffer, buf);
+    if(ret != 0)
+        return ret;
+    memset(buf, 0, INSIZE);
+    return check_file(buffer, buf, check);
+}
+
 int main(int argc, char* argv[])
 {
+    char* path = "memory_file";
+    FD = open(path, sizeof(path), 0);
     struct async_call_buffer buffer;
     int ret = 0;
     ret = async_call_buffer_init(BUFFER_ENTRIES, BUFFER_ENTRIES << 1, &buffer);
-    if (ret < 0) {
+    if (ret != 0) {
         puts("something error");
         return ret;
     }
-    return run_test(&buffer);
+    ret = run_test(&buffer);
+    if (ret != 0) {
+        puts("result error");
+        return ret;
+    }
+    return 0;
 }

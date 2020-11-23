@@ -3,6 +3,14 @@
 
 #include "syscall.h"
 
+int open(const char* path, size_t count, int mode) {
+    return syscall(SYS_openat, path, count, mode);
+}
+
+int close(int fd) {
+    return syscall(SYS_close, fd);
+}
+
 ssize_t write(int fd, const void* buf, size_t count)
 {
     return syscall(SYS_write, fd, buf, count);
