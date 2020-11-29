@@ -14,6 +14,16 @@ typedef unsigned int uint32_t;
 typedef long long int64_t;
 typedef unsigned long long uint64_t;
 
+typedef long ptrdiff_t;
+
+#define ULONG_MAX  (0xffffffffffffffffULL)
+#define LONG_MAX   (0x7fffffffffffffffLL)
+#define INTMAX_MAX LONG_MAX
+#define UINT_MAX   (0xffffffffU)
+#define INT_MAX    (0x7fffffff)
+#define UCHAR_MAX  (0xffU)
+#define CHAR_MAX   (0x7f)
+
 /* *
  * Pointers and addresses are 32 bits long.
  * We use pointer types to represent addresses,

@@ -13,10 +13,11 @@
 
 int FD;
 
-int hash(char* buf) {
+int hash(char* buf)
+{
     int i, checksum = 0;
-    for(i = 0; i < BS / 32; ++i) {
-        checksum ^= *(int*)(buf + 4*i);
+    for (i = 0; i < BS / 32; ++i) {
+        checksum ^= *(int*)(buf + 4 * i);
     }
     return checksum;
 }
@@ -24,8 +25,8 @@ int hash(char* buf) {
 int rand_buffer(char* buf)
 {
     int i;
-    for(i = 0; i < BS / 32; ++i) {
-        *(int*)(buf + 4*i) = rand();
+    for (i = 0; i < BS / 32; ++i) {
+        *(int*)(buf + 4 * i) = rand();
     }
     return 0;
 }
@@ -34,8 +35,8 @@ int init_buffer(char* buf, int* check)
 {
     int i;
     for (i = 0; i < ID_MAX; ++i) {
-        rand_buffer(&buf[BS*i]);
-        check[i] = hash(&buf[BS*i]);
+        rand_buffer(&buf[BS * i]);
+        check[i] = hash(&buf[BS * i]);
     }
     return 0;
 }
@@ -58,7 +59,7 @@ int write_file(struct async_call_buffer* buffer, char* buf)
                                    (smp_load_acquire(buffer->req_ring.khead) + BUFFER_ENTRIES)) {
             int cached_tail = *buffer->req_ring.ktail;
             struct req_ring_entry* req = req_ring_get_entry(buffer, cached_tail);
-            async_call_write(req, FD, &buf[BS*rid], BS, rid * BS);
+            async_call_write(req, FD, &buf[BS * rid], BS, rid * BS);
             rid++;
             smp_store_release(buffer->req_ring.ktail, cached_tail + 1);
         }
@@ -78,7 +79,7 @@ int check_file(struct async_call_buffer* buffer, char* buf, int* check)
                 puts("read length error");
                 return 1;
             }
-            if (hash(&buf[BS*cid]) != check[cid]) {
+            if (hash(&buf[BS * cid]) != check[cid]) {
                 puts("read content error");
                 return 1;
             }
@@ -89,7 +90,7 @@ int check_file(struct async_call_buffer* buffer, char* buf, int* check)
                                    (smp_load_acquire(buffer->req_ring.khead) + BUFFER_ENTRIES)) {
             int cached_tail = *buffer->req_ring.ktail;
             struct req_ring_entry* req = req_ring_get_entry(buffer, cached_tail);
-            async_call_read(req, FD, &buf[BS*rid], BS, rid * BS);
+            async_call_read(req, FD, &buf[BS * rid], BS, rid * BS);
             rid++;
             smp_store_release(buffer->req_ring.ktail, cached_tail + 1);
         }
@@ -107,7 +108,7 @@ int run_test(struct async_call_buffer* buffer, int seed) {
     srand(seed);
     init_buffer(buf, check);
     ret = write_file(buffer, buf);
-    if(ret != 0)
+    if (ret != 0)
         return ret;
     memset(buf, 0, INSIZE);
     return check_file(buffer, buf, check);

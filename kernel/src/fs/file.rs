@@ -55,7 +55,7 @@ impl File {
     }
 
     pub fn new_memory_file(path: String) -> AcoreResult<Self> {
-        let id = path.len() as usize % MEMORY_FILE_MAX_COUNT;
+        let id = path.len() % MEMORY_FILE_MAX_COUNT;
         Ok(File::new(path, id * MEMORY_FILE_SIZE, MEMORY_FILE_SIZE))
     }
 
