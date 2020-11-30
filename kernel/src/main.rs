@@ -28,6 +28,7 @@ mod memory;
 mod sched;
 mod syscall;
 mod task;
+mod timer;
 mod utils;
 
 #[cfg(target_arch = "riscv64")]
@@ -48,6 +49,7 @@ pub extern "C" fn start_kernel(arg0: usize, arg1: usize) -> ! {
         memory::init();
         unsafe { trapframe::init() };
         arch::primary_init(arg0, arg1);
+        timer::init();
         AP_CAN_INIT.store(true, Ordering::Release);
     } else {
         // init other CPUs

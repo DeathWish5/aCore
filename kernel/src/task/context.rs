@@ -55,6 +55,7 @@ impl Thread {
         let res = match trap {
             TrapReason::Syscall => self.handle_syscall(ctx),
             TrapReason::PageFault(addr, access_flags) => self.handle_page_fault(addr, access_flags),
+            TrapReason::Timer => crate::timer::handle_timer(),
             _ => {
                 warn!("unhandled trap from user: {:#x?}", trap);
                 Err(AcoreError::NotSupported)

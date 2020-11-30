@@ -1,9 +1,7 @@
-use trapframe::TrapFrame;
-
+use crate::memory::{handle_kernel_page_fault, MMUFlags};
 use riscv::register::scause::{self, Exception as E, Interrupt as I, Trap};
 use riscv::register::stval;
-
-use crate::memory::{handle_kernel_page_fault, MMUFlags};
+use trapframe::TrapFrame;
 
 /// handle interrupt from kernel
 #[no_mangle]
@@ -18,7 +16,7 @@ extern "C" fn trap_handler(_tf: &mut TrapFrame) {
     match scause.cause() {
         Trap::Interrupt(I::SupervisorExternal) => {}
         Trap::Interrupt(I::SupervisorSoft) => ipi(),
-        Trap::Interrupt(I::SupervisorTimer) => {}
+        // Trap::Interrupt(I::SupervisorTimer) => {}
         Trap::Exception(E::InstructionPageFault) => {
             handle_kernel_page_fault(stval, MMUFlags::EXECUTE).unwrap()
         }
