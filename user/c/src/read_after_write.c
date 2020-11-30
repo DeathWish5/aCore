@@ -116,7 +116,7 @@ int run_test(struct async_call_buffer* buffer, int seed) {
 
 int main(int argc, char* argv[])
 {
-    FD = open(argv[0], strlen(argv[0]), 0);
+    FD = open(argv[0], 0, 0);
     struct async_call_buffer buffer;
     int ret;
     ret = async_call_buffer_init(BUFFER_ENTRIES, BUFFER_ENTRIES << 1, &buffer);

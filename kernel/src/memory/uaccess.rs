@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use core::fmt::{Debug, Formatter, Result};
 use core::marker::PhantomData;
 use core::mem::size_of;
@@ -44,6 +44,26 @@ unsafe fn copy_to_user<T>(udst: *mut T, ksrc: *const T, len: usize) -> AcoreResu
         _ => unreachable!(),
     };
     Ok(())
+}
+
+pub fn check_and_clone_cstr(user: *const u8) -> AcoreResult<String> {
+    if user.is_null() {
+        Ok(String::new())
+    } else {
+        let mut buffer = Vec::new();
+        for i in 0.. {
+            let mut data = 0u8;
+            unsafe {
+                let addr = user.add(i);
+                copy_from_user(&mut data, addr, 1)?;
+            }
+            if data == 0 {
+                break;
+            }
+            buffer.push(data);
+        }
+        String::from_utf8(buffer).map_err(|_| AcoreError::InvalidArgs)
+    }
 }
 
 #[repr(C)]
@@ -101,7 +121,7 @@ impl<T, P: Policy> UserPtr<T, P> {
         }
     }
 
-    unsafe fn as_ptr(&self) -> *mut T {
+    pub unsafe fn as_ptr(&self) -> *mut T {
         self.ptr
     }
 

@@ -99,7 +99,7 @@ impl AsyncCall {
                 self.async_write(fd, user_buf_addr.into(), buf_size, offset)
                     .await
             }
-            AsyncCallType::Open => self.async_open(user_buf_addr.into(), flags).await,
+            AsyncCallType::Open => self.async_open(user_buf_addr.into(), flags, 0).await,
             AsyncCallType::Close => self.async_close(fd).await,
             _ => {
                 warn!("asynca call unimplemented: {:?}", ac_type);
